@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+						http://www.springframework.org/schema/context
+						http://www.springframework.org/schema/context/spring-context-3.2.xsd
+						http://www.springframework.org/schema/util 
+						http://www.springframework.org/schema/util/spring-util-3.2.xsd
+						http://www.springframework.org/schema/tx
+						http://www.springframework.org/schema/tx/spring-tx.xsd
+						http://www.springframework.org/schema/jee 
+						http://www.springframework.org/schema/jee/spring-jee-3.2.xsd
+						http://www.springframework.org/schema/aop
+						http://www.springframework.org/schema/aop/spring-aop-3.2.xsd">
+
+	<context:annotation-config />
+
+	<context:property-placeholder location="classpath:/context/application.properties" />
+		
+	<bean id="gsonBuilder" class="com.google.gson.GsonBuilder"/>
+	
+	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="gsonBuilder" />
+		<property name="targetMethod" value="serializeNulls" />
+	</bean>
+	
+	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="gsonBuilder" />
+		<property name="targetMethod" value="disableHtmlEscaping" />
+	</bean>
+
+	<bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="gsonBuilder" />
+		<property name="targetMethod" value="setPrettyPrinting" />
+	</bean>
+
+	<bean id="gson" class="com.jonest.util.GsonFactoryBean">
+		<constructor-arg type="com.google.gson.GsonBuilder" ref="gsonBuilder" />
+	</bean>
+	
+	<bean id="httpRequestHandler" class="com.jonest.servlet.impl.NestRequestHandler">
+		<constructor-arg type="com.jonest.nest.NestedObjectHandler">
+			<bean class="com.jonest.nest.impl.NestedObjectHandlerImpl"/>
+		</constructor-arg>
+		<constructor-arg type="java.util.Map" ref="baseMap"/>
+	</bean>
+
+	<bean id="printableAdapter" class="com.jonest.adapters.impl.PrintingObjectAdapter">
+		<constructor-arg type="com.jonest.printing.PrintingAdapter">
+			<bean class="com.jonest.printing.impl.PrintingAdapterImpl" />
+		</constructor-arg>
+		<constructor-arg type="int" value="2"/>
+	</bean>
+	
+	<bean id="pagingAdapter" class="com.jonest.adapters.impl.PagingAdapter">
+		<constructor-arg>
+			<bean id="pagingHandler" class="com.jonest.paging.impl.PaginationHandlerImpl">
+				<constructor-arg type="int" value="3"/>
+			</bean>
+		</constructor-arg>
+	</bean>
+	
+	<bean id="jsonFormatter" class="com.jonest.format.impl.JsonFormatter">
+		<constructor-arg ref="gson"/>
+	</bean>
+
+	<bean id="httpResponseHandler" class="com.jonest.servlet.impl.PagedResponseHandler">
+		<constructor-arg index="0"  ref="printableAdapter"/>
+		<constructor-arg index="1" ref="pagingAdapter"/>
+		<constructor-arg type="com.jonest.format.ContentFormatter" ref="jsonFormatter"/>
+	</bean>
+
+	<!-- Root Objects Configuration -->
+
+	<bean id="innerObject" class="com.restmodel.test.BaseApiObject">
+		<property name="name" value="Este es mi nombre"/>
+		 <property name="revision">
+		 	<util:list>
+		 		<value>2</value>
+		 		<value>4</value>
+		 		<value>6</value>
+		 		<value>8</value>
+		 	</util:list>
+		 </property>
+	</bean>
+
+	<bean id="baseApiObject" class="com.restmodel.test.BaseApiObject">
+		<property name="name" value="Este es mi nombre"/>
+		 <property name="revision">
+		 	<util:list>
+		 		<value>2</value>
+		 		<value>4</value>
+		 		<value>6</value>
+		 		<value>8</value>
+		 	</util:list>
+		 </property>
+		 <property name="map">
+		 	<util:map>
+		 		<entry key="inner" value-ref="innerObject"/>
+		 	</util:map>
+		 </property>
+	</bean>
+
+	<bean id="gatewayServices" class="com.restmodel.test.GatewayServices">
+		<constructor-arg type="com.restmodel.test.Apis"><null/></constructor-arg>
+		<constructor-arg type="com.restmodel.test.Caches"><null/></constructor-arg>
+	</bean>
+
+	<bean id="apigeeApis" class="com.restmodel.test.ApigeeApis">
+		<constructor-arg type="com.restmodel.test.GatewayServices" ref="gatewayServices"/>
+		<constructor-arg type="com.restmodel.test.DeveloperServices"><null/></constructor-arg>
+	</bean>
+
+	<util:map id="baseMap" value-type="java.lang.Object">
+      <entry key="valor1" value-ref="baseApiObject" />
+      <entry key="valor2" value-ref="apigeeApis" />
+   </util:map>
+   
+</beans>
